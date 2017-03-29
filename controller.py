@@ -360,6 +360,10 @@ class AMU:
             else:
                 counter_id = COUNTER_NAME_TO_ID['src_ip_counter_' + str(USED_COUNTER_TBL_INDEX)]
                 couter_values = client.p4_counter_retrieve(counter_id)
+                if counter_values.count != -1:
+                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
+                else:
+                    raise RTEError, "Failed to get counter.\n"
                 value_index = 0
                 for key in self.curr_meaprof.srcnet_dict:
                     self.curr_meaprof.srcnet_dict[key] = counter_values[value_index]
@@ -368,6 +372,10 @@ class AMU:
 
                 counter_id = COUNTER_NAME_TO_ID['dst_ip_counter_' + str(USED_COUNTER_TBL_INDEX)]
                 couter_values = client.p4_counter_retrieve(counter_id)
+                if counter_values.count != -1:
+                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
+                else:
+                    raise RTEError, "Failed to get counter.\n"
                 value_index = 0
                 for key in self.curr_meaprof.dstnet_dict:
                     self.curr_meaprof.dstnet_dict[key] = counter_values[value_index]
@@ -376,6 +384,10 @@ class AMU:
 
                 counter_id = COUNTER_NAME_TO_ID['proto_counter_' + str(USED_COUNTER_TBL_INDEX)]
                 couter_values = client.p4_counter_retrieve(counter_id)
+                if counter_values.count != -1:
+                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
+                else:
+                    raise RTEError, "Failed to get counter.\n"
                 value_index = 0
                 for key in self.curr_meaprof.prot_dict:
                     self.curr_meaprof.prot_dict[key] = counter_values[value_index]
@@ -384,6 +396,10 @@ class AMU:
 
                 counter_id = COUNTER_NAME_TO_ID['src_port_counter_' + str(USED_COUNTER_TBL_INDEX)]
                 couter_values = client.p4_counter_retrieve(counter_id)
+                if counter_values.count != -1:
+                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
+                else:
+                    raise RTEError, "Failed to get counter.\n"
                 value_index = 0
                 for key in self.curr_meaprof.srcport_dict:
                     self.curr_meaprof.srcport_dict[key] = counter_values[value_index]
@@ -392,6 +408,10 @@ class AMU:
 
                 counter_id = COUNTER_NAME_TO_ID['dst_port_counter_' + str(USED_COUNTER_TBL_INDEX)]
                 couter_values = client.p4_counter_retrieve(counter_id)
+                if counter_values.count != -1:
+                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
+                else:
+                    raise RTEError, "Failed to get counter.\n"
                 value_index = 0
                 for key in self.curr_meaprof.dstport_dict:
                     self.curr_meaprof.dstport_dict[key] = counter_values[value_index]
@@ -403,6 +423,10 @@ class AMU:
 
                 counter_id = COUNTER_NAME_TO_ID['n_flow_counter']
                 counter_values = client.p4_counter_retrieve(counter_id)
+                if counter_values.count != -1:
+                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
+                else:
+                    raise RTEError, "Failed to get counter.\n"
                 self.curr_meaprof.n_flows = counter_values[0]
                 client.p4_counter_clear(counter_id)
                 
@@ -554,6 +578,10 @@ class AMU:
             ### TODO
             counter_id = COUNTER_NAME_TO_ID['W_G_B_counter']
             counter_values = client.p4_counter_retrieve(counter_id)
+            if counter_values.count != -1:
+                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
+            else:
+                raise RTEError, "Failed to get counter.\n"
             self.flows_in_white = counter_values[0]
             self.flows_in_grey = counter_values[1]
             self.flows_in_black = counter_values[2]
