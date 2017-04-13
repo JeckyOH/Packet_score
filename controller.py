@@ -19,6 +19,10 @@ from thrift.protocol import TBinaryProtocol
 from sdk6_rte import RunTimeEnvironment
 from sdk6_rte.ttypes import *
 
+TEST = True
+TEST_CIRCLE = 1
+CURRENT_CIRCLE = 0
+
 SIM_TIME = 900.0            # Simulated duration
 ST_REAL_TIME = 0.0          # Real timer marking start of simulation
 
@@ -236,6 +240,12 @@ class AMU:
             yield self.env.timeout(NOMPROF_PERIOD)  # Since the first nominal profile is loaded,
                                                     # sleep until next update event
 
+            if TEST:
+                CURRENT_CIRCLE += 1
+                if CURRENT_CIRCLE > TEST_CIRCLE:
+                    print ("Stop by specified test circle. Check it.\n")
+                    continue
+                
             self.last_nomprof = self.curr_nomprof
 
             # Load next NominalProfile to curr_nomprof if available
@@ -263,8 +273,11 @@ class AMU:
                     tbl_entry = TableEntry()
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
-                    tbl_entry.default_rule = False
-                    tbl_entry.match = '{ "ipv4.srcAddr" : { "value" : "%s"}}' % key
+                    if key != "others":
+                        tbl_entry.default_rule = False
+                        tbl_entry.match = '{ "ipv4.srcAddr" : { "value" : "%s/24"}}' % key
+                    else:
+                        tbl_entry.default_rule = True
                     tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
@@ -276,8 +289,11 @@ class AMU:
                     tbl_entry = TableEntry()
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
-                    tbl_entry.default_rule = False
-                    tbl_entry.match = '{ "ipv4.dstAddr" : { "value" : "%s"}}' % key
+                    if key != "others":
+                        tbl_entry.default_rule = False
+                        tbl_entry.match = '{ "ipv4.dstAddr" : { "value" : "%s/24"}}' % key
+                    else:
+                        tbl_entry.default_rule = True
                     tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
@@ -290,7 +306,12 @@ class AMU:
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
                     tbl_entry.default_rule = False
-                    tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "%s"}}' % key
+                    if key != "high" and key != "low":
+                        tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "%s->%s"}}' % (key,key)
+                    elif key == "low":
+                        tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "1->1024"}}'
+                    else:
+                        tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "1024->65535"}}'
                     tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
@@ -303,7 +324,12 @@ class AMU:
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
                     tbl_entry.default_rule = False
-                    tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "%s"}}' % key
+                    if key != "high" and key != "low":
+                        tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "%s->%s"}}' % (key,key)
+                    elif key == "low":
+                        tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "1->1024"}}'
+                    else:
+                        tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "1024->65535"}}'
                     tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
@@ -315,8 +341,11 @@ class AMU:
                     tbl_entry = TableEntry()
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
-                    tbl_entry.default_rule = False
-                    tbl_entry.match = '{ "ipv4.protocol" : { "value" : "%s"}}' % key  
+                    if key != "others":
+                        tbl_entry.default_rule = False
+                        tbl_entry.match = '{ "ipv4.protocol" : { "value" : "%s"}}' % key
+                    else:
+                        tbl_entry.default_rule = True
                     tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
@@ -353,6 +382,8 @@ class AMU:
             # The first MeasuredProfile is already instantiated, so sleep.
             yield self.env.timeout(MEAPROF_PERIOD)
 
+            if TEST:
+                continue
 
             """ Query Counters and construct curr_meaprof  """
             if use_threadpool:
@@ -571,6 +602,8 @@ class AMU:
         while True:
             yield self.env.timeout(THRESH_PERIOD)
 
+            if TEST:
+                continue
 
             """Read counters white grey and black(total_flow = w+b+g)
                replace the following
