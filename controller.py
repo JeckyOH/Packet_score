@@ -58,8 +58,8 @@ PROTS       = [6, 17, 1, 8, 9]
 PORT_MIN    = 1
 PORT_MAX    = 65535
 
-USED_COUNTER_TBL_INDEX = 0 # Index of counter table used now
-LAST_COUNTER_TBL_INDEX = None  # Index of last used counter table
+USED_COUNTER_TBL_INDEX = 1 # Index of counter table used now
+LAST_COUNTER_TBL_INDEX = 0  # Index of last used counter table
 COUNTER_TBL_SETS = 2 # The number of sets of counter tables
 
 USED_SCORE_TBL_INDEX = 0
@@ -206,6 +206,7 @@ class AMU:
 
             
         """ TODO: Need to refresh all tables to let them empty  """
+        ClearCountingTableRules()
             
         if use_threadpool:
             self.thread_pool = ThreadPool.ThreadPool(THREADS_NUM)
@@ -232,6 +233,12 @@ class AMU:
         self.env.process(amu.UpdateMeaProf())   # UpdateMeaProf after UpdateNomProf
         self.env.process(amu.UpdateThresh())
 
+    def ClearCountingTableRules(self):
+        for tbl_prefix in COUNTER_TABLE_PREFIXS:
+            tbl_id = TABLE_NAME_TO_ID[tbl_prefix + str(LAST_COUNTER_TBL_INDEX)]
+            table_entries = client.table_retrieve(tbl_id)
+            for table_entry in table_entries:
+                client.table_entry_delete(tbl_id, table_entry)
 
     def UpdateNomProf(self):
         """A long-running process that periodically updates nominal profile
@@ -242,6 +249,8 @@ class AMU:
 
             if TEST:
                 CURRENT_CIRCLE += 1
+                filename = "nom_entries_circle_" + str(CURRENT_CIRCLE)
+                fo = open(filename, "w+")
                 if CURRENT_CIRCLE > TEST_CIRCLE:
                     print ("Stop by specified test circle. Check it.\n")
                     continue
@@ -267,9 +276,15 @@ class AMU:
             if use_threadpool:
                 self.thread_pool.add_task()
             else:
+                if TEST:
+                    fo.write("Add rules. Add set: %d\n") % USED_COUNTER_TBL_INDEX
                 rule_index = 0
                 tbl_id = TABLE_NAME_TO_ID['src_ip_' + str(USED_COUNTER_TBL_INDEX)]
+                if TEST:
+                    fo.write("src_ip_%d") % USED_COUNTER_TBL_INDEX
                 for key in self.curr_nomprof.srcnet_dict:
+                    if TEST:
+                        fo.write("%s\n") % key
                     tbl_entry = TableEntry()
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
@@ -278,14 +293,18 @@ class AMU:
                         tbl_entry.match = '{ "ipv4.srcAddr" : { "value" : "%s/24"}}' % key
                     else:
                         tbl_entry.default_rule = True
-                    tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
+                    tbl_entry.actions = '{ "type" : "__src_ip_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
                         raise RTEError, "Failed to add rule to table %s" % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
 
                 rule_index = 0
                 tbl_id = TABLE_NAME_TO_ID['dst_ip_' + str(USED_COUNTER_TBL_INDEX)]
+                if TEST:
+                    fo.write("dst_ip_%d") % USED_COUNTER_TBL_INDEX
                 for key in self.curr_nomprof.dstnet_dict:
+                    if TEST:
+                        fo.write("%s\n") % key
                     tbl_entry = TableEntry()
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
@@ -294,14 +313,18 @@ class AMU:
                         tbl_entry.match = '{ "ipv4.dstAddr" : { "value" : "%s/24"}}' % key
                     else:
                         tbl_entry.default_rule = True
-                    tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
+                    tbl_entry.actions = '{ "type" : "__dst_ip_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
                         raise RTEError, "Failed to add rule to table %s" % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
 
                 rule_index = 0
                 tbl_id = TABLE_NAME_TO_ID['src_port_' + str(USED_COUNTER_TBL_INDEX)]
+                if TEST:
+                    fo.write("src_port_%d") % USED_COUNTER_TBL_INDEX
                 for key in self.curr_nomprof.srcport_dict :
+                    if TEST:
+                        fo.write("%s\n") % key
                     tbl_entry = TableEntry()
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
@@ -312,14 +335,18 @@ class AMU:
                         tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "1->1024"}}'
                     else:
                         tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "1024->65535"}}'
-                    tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
+                    tbl_entry.actions = '{ "type" : "__src_port_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
                         raise RTEError, "Failed to add rule to table %s" % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
 
                 rule_index = 0
                 tbl_id = TABLE_NAME_TO_ID['dst_port_' + str(USED_COUNTER_TBL_INDEX)]
+                if TEST:
+                    fo.write("dst_port_%d") % USED_COUNTER_TBL_INDEX
                 for key in self.curr_nomprof.dstport_dict :
+                    if TEST:
+                        fo.write("%s\n") % key
                     tbl_entry = TableEntry()
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
@@ -330,14 +357,18 @@ class AMU:
                         tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "1->1024"}}'
                     else:
                         tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "1024->65535"}}'
-                    tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
+                    tbl_entry.actions = '{ "type" : "__dst_port_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
                         raise RTEError, "Failed to add rule to table %s" % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
 
                 rule_index = 0
                 tbl_id = TABLE_NAME_TO_ID['proto_' + str(USED_COUNTER_TBL_INDEX)]
+                if TEST:
+                    fo.write("proto_%d") % USED_COUNTER_TBL_INDEX
                 for key in self.curr_nomprof.prot_dict:
+                    if TEST:
+                        fo.write("%s\n") % key
                     tbl_entry = TableEntry()
                     tbl_entry.rule_name = 'rule%d' % rule_index
                     rule_index += 1
@@ -346,7 +377,7 @@ class AMU:
                         tbl_entry.match = '{ "ipv4.protocol" : { "value" : "%s"}}' % key
                     else:
                         tbl_entry.default_rule = True
-                    tbl_entry.actions = '{ "type" : "_nop", "data" : { } }'
+                    tbl_entry.actions = '{ "type" : "__proto_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
                     ret = client.table_entry_add(tblid, tbl_entry)
                     if ret.value != RteReturnValue.SUCCESS:
                         raise RTEError, "Failed to add rule to table %s." % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
@@ -365,6 +396,9 @@ class AMU:
 
             # Delete Old Table Rules
             # TODO Here, maybe I need to put deleting codes in a thread to let main thread run?
+            if TEST:
+                fo.write("Delete Table Rules. Deleted Set:%d\n") % LAST_COUNTER_TBL_INDEX
+                fo.close()
             for tbl_prefix in COUNTER_TABLE_PREFIXS:
                 tbl_id = TABLE_NAME_TO_ID[tbl_prefix + str(LAST_COUNTER_TBL_INDEX)]
                 table_entries = client.table_retrieve(tbl_id)
