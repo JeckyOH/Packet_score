@@ -19,9 +19,14 @@ from thrift.protocol import TBinaryProtocol
 from sdk6_rte import RunTimeEnvironment
 from sdk6_rte.ttypes import *
 
+
+class RTEError(Exception): pass
+
+# Just for test
 TEST = True
-TEST_CIRCLE = 1
+fo = None
 CURRENT_CIRCLE = 0
+TEST_CIRCLE = 1
 
 SIM_TIME = 900.0            # Simulated duration
 ST_REAL_TIME = 0.0          # Real timer marking start of simulation
@@ -29,6 +34,12 @@ ST_REAL_TIME = 0.0          # Real timer marking start of simulation
 NOMPROF_PERIOD = 900.0      # Nominal profile update period
 MEAPROF_PERIOD = 15.0       # Measured profile update period
 THRESH_PERIOD  = 1.0        # Threshold control period
+
+# Threasholds for the first circle
+INITIAL_WHITE = 1000.0
+INITIAL_GREY = 200.0
+
+UTILITY_SCORE = 100
 
 FN_NOMINAL = "./FlowFiles/200903301200_300fps.txt"
 FN_LEGIT =   "./FlowFiles/200903301200_300fps.txt"
@@ -58,13 +69,13 @@ PROTS       = [6, 17, 1, 8, 9]
 PORT_MIN    = 1
 PORT_MAX    = 65535
 
-USED_COUNTER_TBL_INDEX = 1 # Index of counter table used now
-LAST_COUNTER_TBL_INDEX = 0  # Index of last used counter table
 COUNTER_TBL_SETS = 2 # The number of sets of counter tables
+USED_COUNTER_TBL_INDEX = 0 # Index of counter table used now
+LAST_COUNTER_TBL_INDEX = 0  # Index of last used counter table
 
-USED_SCORE_TBL_INDEX = 0
-LAST_SCORE_TBL_INDEX = None
 SCORE_TBL_SETS = 2
+USED_SCORE_TBL_INDEX = SCORE_TBL_SETS - 1
+LAST_SCORE_TBL_INDEX = None
 
 TABLE_NAME_TO_ID = {}
 COUNTER_NAME_TO_ID = {}
@@ -190,9 +201,165 @@ class AMU:
         print "%s: AMU - Prepared %d NominalProfiles." %(GetTimestamp(self.env),
                                                          len(self.nomprofs))
 
-        flow_file.close()
+        flow_file.close()        
 
+    def AddRulesToCountingTables(self, tbl_name, counting_dict):
+        rule_index = 0
+        tbl_id = TABLE_NAME_TO_ID[tbl_name]
+        if TEST:
+            fo.write("%s\n" % tbl_name)
+        for key in counting_dict:
+            if TEST:
+                fo.write("%s\n" % key )
+            tbl_entry = TableEntry()
+            tbl_entry.rule_name = 'rule%d' % rule_index
+            tbl_entry.actions = '{ "type" : "__%s___nop", "data" : { } }' % tbl_name
+            rule_index += 1
+            tbl_entry.default_rule = False
+            field = {
+                'src_ip': 'ipv4.srcAddr',
+                'dst_ip': 'ipv4.dstAddr',
+                'src_port': 'l4.sport',
+                'dst_port': 'l4.dport',
+                'proto': 'ipv4.protocol'
+            }[tbl_name[0:-2]]
+            
+            if key == "others":
+                tbl_entry.default_rule = True
+            else:
+                if key == "high":
+                    value = "1025->65535"
+                elif key == "low":
+                    value = "1->1024"
+                else:
+                    value = {
+                        'src_ip': '%s/24' % key,
+                        'dst_ip': '%s/24' % key,
+                        'src_port': '%s->%s' % (key,key),
+                        'dst_port': '%s->%s' % (key,key),
+                        'proto': '%s' % key
+                    }[tbl_name[0:-2]]
+                tbl_entry.match = '{ "%s" : { "value" : "%s"}}' % (field,value)
+                    
+            ret = client.table_entry_add(tbl_id, tbl_entry)
+            if ret.value != RteReturnValue.SUCCESS:
+                raise RTEError, "Failed to add rule to table %s" % tbl_name
 
+    def AddRulesToScoreTables(self, tbl_name, score_dict):
+        rule_index = 0
+        tbl_id = TABLE_NAME_TO_ID[tbl_name]
+        for key in score_dict:
+            tbl_entry = TableEntry()
+            tbl_entry.rule_name = 'rule%d' % rule_index
+            rule_index += 1
+            tbl_entry.actions = '{ "type" : "__%s___add_score", "data" : { "score_value" : "%d" } }' % (tbl_name, score_dict[key])
+            tbl_entry.default_rule = False
+            field = {
+                'src_ip_score': 'ipv4.srcAddr',
+                'dst_ip_score': 'ipv4.dstAddr',
+                'src_port_score': 'l4.sport',
+                'dst_port_score': 'l4.dport',
+                'proto_score': 'ipv4.protocol'
+            }[tbl_name[0:-2]]
+            
+            if key == "others":
+                tbl_entry.default_rule = True
+            else:
+                if key == "high":
+                    value = "1025->65535"
+                elif key == "low":
+                    value = "1->1024"
+                else:
+                    value = {
+                        'src_ip_score': '%s/24' % key,
+                        'dst_ip_score': '%s/24' % key,
+                        'src_port_score': '%s->%s' % (key,key),
+                        'dst_port_score': '%s->%s' % (key,key),
+                        'proto_score': '%s' % key
+                    }[tbl_name[0:-2]]
+                tbl_entry.match = '{ "%s" : { "value" : "%s"}}' % (field,value)
+                    
+            ret = client.table_entry_add(tblid, tbl_entry)
+            if ret.value != RteReturnValue.SUCCESS:
+                raise RTEError, "Failed to add rule to table %s" % 'src_ip_score_' + str(USED_SCORE_TBL_INDEX)
+
+    def AssignMeaDictsByCounters(self, counter_name, meaprof_dict):
+        counter_id = COUNTER_NAME_TO_ID[counter_name]
+        couter_values = client.p4_counter_retrieve(counter_id)
+        if counter_values.count != -1:
+            counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
+        else:
+            raise RTEError, "Failed to get counter %s.\n" % counter_name
+        if counter_name == "n_flow_counter":
+            self.curr_meaprof.n_flows = counter_values[0]
+        else:
+            value_index = 1
+            for key in meaprof_dict:
+                if key == "others":
+                    meaprof_dict[key] = counter_values[0]
+                else:
+                    meaprof_dict[key] = counter_values[value_index]
+                    value_index += 1
+        client.p4_counter_clear(counter_id)
+
+    def InitializeP4Tables(self):
+        """ Initialize P4 Tables:
+        1. Clear them
+        2. Add Required rules for non-deletion tables.
+        """
+
+        # First, clear all p4 tables.
+        for tbl_name in TABLE_NAME_TO_ID:
+            tbl_id = TABLE_NAME_TO_ID[tbl_name]
+            table_entries = client.table_retrieve(tbl_id)
+            for table_entry in table_entries:
+                client.table_entry_delete(tbl_id, table_entry)
+
+        #  Initialize l4_ports table
+        tbl_id = TABLE_NAME_TO_ID['l4_ports']
+        tbl_entry = TableEntry()
+        tbl_entry.rule_name = 'tcp'
+        tbl_entry.default_rule = False
+        tbl_entry.match = '{"ipv4.protocol" : {"value" : "6"}}'
+        tbl_entry.actions = '{"type" : "set_tcp_ports","data" : {}}'
+        if client.table_entry_add(tbl_id, tbl_entry).value != RteReturnValue.SUCCESS:
+            raise RTEError, "Failed to add rule to table l4_ports.\n"
+        tbl_entry.rule_name = 'udp'
+        tbl_entry.default_rule = False
+        tbl_entry.match = '{"ipv4.protocol" : {"value" : "17"}}'
+        tbl_entry.actions = '{"type" : "set_udp_ports","data" : {}}'
+        if client.table_entry_add(tbl_id, tbl_entry).value != RteReturnValue.SUCCESS:
+            raise RTEError, "Failed to add rule to table l4_ports.\n"
+ 
+        #  Initialze sum_up table, add the only one rule
+        tbl_id = TABLE_NAME_TO_ID['sum_up']
+        tbl_entry = TableEntry()
+        tbl_entry.rule_name = 'only_one'
+        tbl_entry.default_rule = True
+        tbl_entry.actions = ' {"type":"__sum_up__add_score", "data" : {"score_value" : {"value": "%d"}}}' % UTILITY_SCORE
+        if client.table_entry_add(tbl_id, tbl_entry).value != RteReturnValue.SUCCESS:
+            raise RTEError, "Failed to add rule to table sum_up.\n"
+                
+        #  Initialize classify table, add white grey and black rules for packets 
+        tbl_id = TABLE_NAME_TO_ID['classify']
+        tbl_entry = TableEntry()
+        tbl_entry.rule_name = 'white'
+        tbl_entry.default_rule = False
+        tbl_entry.match = '{ "score_metadata.score" : { "value" : "%f->10000.0"}}' % INITIAL_WHITE
+        tbl_entry.actions = ' {"type":"send_out", "data" : {"out_port" : {"value": "v0.1"}}}'
+        if client.table_entry_add(tbl_id, tbl_entry).value != RteReturnValue.SUCCESS:
+            raise RTEError, "Failed to add rule to table classify.\n"
+        tbl_entry.rule_name = 'grey'
+        tbl_entry.match = '{ "score_metadata.score" : { "value" : "%f->%f"}}' % (INITIAL_GREY,INITIAL_WHITE)
+        tbl_entry.actions = ' {"type":"send_out", "data" : {"out_port" : {"value": "v0.2"}}}'
+        if client.table_entry_add(tbl_id, tbl_entry).value != RteReturnValue.SUCCESS:
+            raise RTEError, "Failed to add rule to table classify.\n"
+        tbl_entry.rule_name = 'black'
+        tbl_entry.match = '{ "score_metadata.score" : { "value" : "0->%f"}}' % INITIAL_GREY
+        tbl_entry.actions = ' {"type":"_drop", "data" : { }}'
+        if client.table_entry_add(tbl_id, tbl_entry).value != RteReturnValue.SUCCESS:
+            raise RTEError, "Failed to add rule to table classify.\n" 
+        
     def Initialize(self):
 
         """ Get Tables and map their names to IDs  """
@@ -204,10 +371,8 @@ class AMU:
         for counter in counters_info:
             COUNTER_NAME_TO_ID[counter.name[0:counter.name.find("_packets")]] = counter.id
 
-            
-        """ TODO: Need to refresh all tables to let them empty  """
-        ClearCountingTableRules()
-            
+        self.InitializeP4Tables()
+    
         if use_threadpool:
             self.thread_pool = ThreadPool.ThreadPool(THREADS_NUM)
             
@@ -217,10 +382,28 @@ class AMU:
         self.PrepareNomProf()
 
         # Load the first NominalProfile to curr_nomprof
+        if TEST:
+                global CURRENT_CIRCLE
+                CURRENT_CIRCLE += 1
+                global fo
+                fo = open("nom_initialize", "w+")
         self.curr_nomprof = self.nomprofs.pop(0)
+        """ Add Rules to Counting Tables  """
+        if use_threadpool:
+            self.thread_pool.add_task()
+        else:
+            self.AddRulesToCountingTables('src_ip_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.srcnet_dict)
+            self.AddRulesToCountingTables('dst_ip_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.dstnet_dict)
+            self.AddRulesToCountingTables('src_port_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.srcport_dict)
+            self.AddRulesToCountingTables('dst_port_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.dstport_dict)
+            self.AddRulesToCountingTables('proto_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.prot_dict)
+        if TEST:
+            global fo
+            fo.close()
         print ("%s: AMU - Using NominalProfile[%.1f]." \
                %(GetTimestamp(self.env), self.curr_nomprof.timestamp))
 
+        
         # Instantiate the first measured profile
         self.curr_meaprof = MeasuredProfile(self.env.now, duration=MEAPROF_PERIOD)
         self.curr_meaprof.SetNomProf(self.curr_nomprof) # Initialize the first measured profile
@@ -228,17 +411,17 @@ class AMU:
                %(GetTimestamp(self.env), self.curr_meaprof.timestamp,
                  self.curr_meaprof.nomprof.timestamp))
 
+        tbl_entry = TableEntry()
+        tbl_entry.rule_name = 'only_one'
+        tbl_entry.default_rule = True
+        tbl_entry.actions = '{ "type" : "set_counting_flag", "data" : { "flag" : { "value" : "%d"}}}' % USED_COUNTER_TBL_INDEX
+        if client.table_entry_add(TABLE_NAME_TO_ID['switch_counting_flag'], tbl_entry).value != RteReturnValue.SUCCESS:
+            raise RTEError, "Failed to add rule to table switch_counting_flag.\n"
+        
         # Start long-running processes
         self.env.process(amu.UpdateNomProf())
         self.env.process(amu.UpdateMeaProf())   # UpdateMeaProf after UpdateNomProf
         self.env.process(amu.UpdateThresh())
-
-    def ClearCountingTableRules(self):
-        for tbl_prefix in COUNTER_TABLE_PREFIXS:
-            tbl_id = TABLE_NAME_TO_ID[tbl_prefix + str(LAST_COUNTER_TBL_INDEX)]
-            table_entries = client.table_retrieve(tbl_id)
-            for table_entry in table_entries:
-                client.table_entry_delete(tbl_id, table_entry)
 
     def UpdateNomProf(self):
         """A long-running process that periodically updates nominal profile
@@ -246,10 +429,11 @@ class AMU:
         while True:
             yield self.env.timeout(NOMPROF_PERIOD)  # Since the first nominal profile is loaded,
                                                     # sleep until next update event
-
             if TEST:
+                global CURRENT_CIRCLE
                 CURRENT_CIRCLE += 1
                 filename = "nom_entries_circle_" + str(CURRENT_CIRCLE)
+                global fo
                 fo = open(filename, "w+")
                 if CURRENT_CIRCLE > TEST_CIRCLE:
                     print ("Stop by specified test circle. Check it.\n")
@@ -270,142 +454,39 @@ class AMU:
             
 
             ### Add new rules
+            global LAST_COUNTER_TBL_INDEX
+            global USED_COUNTER_TBL_INDEX
             LAST_COUNTER_TBL_INDEX = USED_COUNTER_TBL_INDEX  # store last used index for deleting table entries 
             USED_COUNTER_TBL_INDEX = (USED_COUNTER_TBL_INDEX + 1) % COUNTER_TBL_SETS
 
             if use_threadpool:
                 self.thread_pool.add_task()
             else:
-                if TEST:
-                    fo.write("Add rules. Add set: %d\n") % USED_COUNTER_TBL_INDEX
-                rule_index = 0
-                tbl_id = TABLE_NAME_TO_ID['src_ip_' + str(USED_COUNTER_TBL_INDEX)]
-                if TEST:
-                    fo.write("src_ip_%d") % USED_COUNTER_TBL_INDEX
-                for key in self.curr_nomprof.srcnet_dict:
-                    if TEST:
-                        fo.write("%s\n") % key
-                    tbl_entry = TableEntry()
-                    tbl_entry.rule_name = 'rule%d' % rule_index
-                    rule_index += 1
-                    if key != "others":
-                        tbl_entry.default_rule = False
-                        tbl_entry.match = '{ "ipv4.srcAddr" : { "value" : "%s/24"}}' % key
-                    else:
-                        tbl_entry.default_rule = True
-                    tbl_entry.actions = '{ "type" : "__src_ip_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
-                    ret = client.table_entry_add(tblid, tbl_entry)
-                    if ret.value != RteReturnValue.SUCCESS:
-                        raise RTEError, "Failed to add rule to table %s" % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
-
-                rule_index = 0
-                tbl_id = TABLE_NAME_TO_ID['dst_ip_' + str(USED_COUNTER_TBL_INDEX)]
-                if TEST:
-                    fo.write("dst_ip_%d") % USED_COUNTER_TBL_INDEX
-                for key in self.curr_nomprof.dstnet_dict:
-                    if TEST:
-                        fo.write("%s\n") % key
-                    tbl_entry = TableEntry()
-                    tbl_entry.rule_name = 'rule%d' % rule_index
-                    rule_index += 1
-                    if key != "others":
-                        tbl_entry.default_rule = False
-                        tbl_entry.match = '{ "ipv4.dstAddr" : { "value" : "%s/24"}}' % key
-                    else:
-                        tbl_entry.default_rule = True
-                    tbl_entry.actions = '{ "type" : "__dst_ip_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
-                    ret = client.table_entry_add(tblid, tbl_entry)
-                    if ret.value != RteReturnValue.SUCCESS:
-                        raise RTEError, "Failed to add rule to table %s" % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
-
-                rule_index = 0
-                tbl_id = TABLE_NAME_TO_ID['src_port_' + str(USED_COUNTER_TBL_INDEX)]
-                if TEST:
-                    fo.write("src_port_%d") % USED_COUNTER_TBL_INDEX
-                for key in self.curr_nomprof.srcport_dict :
-                    if TEST:
-                        fo.write("%s\n") % key
-                    tbl_entry = TableEntry()
-                    tbl_entry.rule_name = 'rule%d' % rule_index
-                    rule_index += 1
-                    tbl_entry.default_rule = False
-                    if key != "high" and key != "low":
-                        tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "%s->%s"}}' % (key,key)
-                    elif key == "low":
-                        tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "1->1024"}}'
-                    else:
-                        tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "1024->65535"}}'
-                    tbl_entry.actions = '{ "type" : "__src_port_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
-                    ret = client.table_entry_add(tblid, tbl_entry)
-                    if ret.value != RteReturnValue.SUCCESS:
-                        raise RTEError, "Failed to add rule to table %s" % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
-
-                rule_index = 0
-                tbl_id = TABLE_NAME_TO_ID['dst_port_' + str(USED_COUNTER_TBL_INDEX)]
-                if TEST:
-                    fo.write("dst_port_%d") % USED_COUNTER_TBL_INDEX
-                for key in self.curr_nomprof.dstport_dict :
-                    if TEST:
-                        fo.write("%s\n") % key
-                    tbl_entry = TableEntry()
-                    tbl_entry.rule_name = 'rule%d' % rule_index
-                    rule_index += 1
-                    tbl_entry.default_rule = False
-                    if key != "high" and key != "low":
-                        tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "%s->%s"}}' % (key,key)
-                    elif key == "low":
-                        tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "1->1024"}}'
-                    else:
-                        tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "1024->65535"}}'
-                    tbl_entry.actions = '{ "type" : "__dst_port_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
-                    ret = client.table_entry_add(tblid, tbl_entry)
-                    if ret.value != RteReturnValue.SUCCESS:
-                        raise RTEError, "Failed to add rule to table %s" % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
-
-                rule_index = 0
-                tbl_id = TABLE_NAME_TO_ID['proto_' + str(USED_COUNTER_TBL_INDEX)]
-                if TEST:
-                    fo.write("proto_%d") % USED_COUNTER_TBL_INDEX
-                for key in self.curr_nomprof.prot_dict:
-                    if TEST:
-                        fo.write("%s\n") % key
-                    tbl_entry = TableEntry()
-                    tbl_entry.rule_name = 'rule%d' % rule_index
-                    rule_index += 1
-                    if key != "others":
-                        tbl_entry.default_rule = False
-                        tbl_entry.match = '{ "ipv4.protocol" : { "value" : "%s"}}' % key
-                    else:
-                        tbl_entry.default_rule = True
-                    tbl_entry.actions = '{ "type" : "__proto_%d___nop", "data" : { } }' % USED_COUNTER_TBL_INDEX
-                    ret = client.table_entry_add(tblid, tbl_entry)
-                    if ret.value != RteReturnValue.SUCCESS:
-                        raise RTEError, "Failed to add rule to table %s." % 'src_ip_' + str(USED_COUNTER_TBL_INDEX)
-
+                self.AddRulesToCountingTables('src_ip_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.srcnet_dict)
+                self.AddRulesToCountingTables('dst_ip_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.dstnet_dict)
+                self.AddRulesToCountingTables('src_port_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.srcport_dict)
+                self.AddRulesToCountingTables('dst_port_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.dstport_dict)
+                self.AddRulesToCountingTables('proto_' + str(USED_COUNTER_TBL_INDEX), self.curr_nomprof.prot_dict)
+                
             # Switch to new updated counter table
             tbl_entry = TableEntry()
             tbl_entry.rule_name = 'only_one'
-            tbl_entry.default_rule = False
-            tbl_entry.match = '{ }'
-            tbl_entry.actions = '{ }'
-            if client.table_entry_delete(TABLE_NAME_TO_ID['switch_counting_flag'], tbl_entry).value != RteReturnValue.SUCCESS:
-                raise RTEError, "Failed to delete rule from table switch_counting_flag.\n"
+            tbl_entry.default_rule = True
             tbl_entry.actions = '{ "type" : "set_counting_flag", "data" : { "flag" : { "value" : "%d"}}}' % USED_COUNTER_TBL_INDEX
-            if client.table_entry_add(TABLE_NAME_TO_ID['switch_counting_flag'], tbl_entry).value != RteReturnValue.SUCCESS:
-                raise RTEError, "Failed to add rule to table switch_counting_flag.\n"
+            if client.table_entry_edit(TABLE_NAME_TO_ID['switch_counting_flag'], tbl_entry).value != RteReturnValue.SUCCESS:
+                raise RTEError, "Failed to edit rule in table switch_counting_flag.\n"
 
             # Delete Old Table Rules
             # TODO Here, maybe I need to put deleting codes in a thread to let main thread run?
             if TEST:
-                fo.write("Delete Table Rules. Deleted Set:%d\n") % LAST_COUNTER_TBL_INDEX
+                fo.write("Delete Table Rules. Deleted Set:%d\n" % LAST_COUNTER_TBL_INDEX)
+                global fo
                 fo.close()
             for tbl_prefix in COUNTER_TABLE_PREFIXS:
                 tbl_id = TABLE_NAME_TO_ID[tbl_prefix + str(LAST_COUNTER_TBL_INDEX)]
                 table_entries = client.table_retrieve(tbl_id)
                 for table_entry in table_entries:
                     client.table_entry_delete(tbl_id, table_entry)
-
-                
             
     def UpdateMeaProf(self):
         """A long-running process that periodically updates measurement profile
@@ -423,77 +504,11 @@ class AMU:
             if use_threadpool:
                 pass  # TODO
             else:
-                counter_id = COUNTER_NAME_TO_ID['src_ip_counter_' + str(USED_COUNTER_TBL_INDEX)]
-                couter_values = client.p4_counter_retrieve(counter_id)
-                if counter_values.count != -1:
-                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
-                else:
-                    raise RTEError, "Failed to get counter.\n"
-                value_index = 0
-                for key in self.curr_meaprof.srcnet_dict:
-                    self.curr_meaprof.srcnet_dict[key] = counter_values[value_index]
-                    value_index += 1
-                client.p4_counter_clear(counter_id)
-
-                counter_id = COUNTER_NAME_TO_ID['dst_ip_counter_' + str(USED_COUNTER_TBL_INDEX)]
-                couter_values = client.p4_counter_retrieve(counter_id)
-                if counter_values.count != -1:
-                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
-                else:
-                    raise RTEError, "Failed to get counter.\n"
-                value_index = 0
-                for key in self.curr_meaprof.dstnet_dict:
-                    self.curr_meaprof.dstnet_dict[key] = counter_values[value_index]
-                    value_index += 1
-                client.p4_counter_clear(counter_id)
-
-                counter_id = COUNTER_NAME_TO_ID['proto_counter_' + str(USED_COUNTER_TBL_INDEX)]
-                couter_values = client.p4_counter_retrieve(counter_id)
-                if counter_values.count != -1:
-                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
-                else:
-                    raise RTEError, "Failed to get counter.\n"
-                value_index = 0
-                for key in self.curr_meaprof.prot_dict:
-                    self.curr_meaprof.prot_dict[key] = counter_values[value_index]
-                    value_index += 1
-                client.p4_counter_clear(counter_id)
-
-                counter_id = COUNTER_NAME_TO_ID['src_port_counter_' + str(USED_COUNTER_TBL_INDEX)]
-                couter_values = client.p4_counter_retrieve(counter_id)
-                if counter_values.count != -1:
-                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
-                else:
-                    raise RTEError, "Failed to get counter.\n"
-                value_index = 0
-                for key in self.curr_meaprof.srcport_dict:
-                    self.curr_meaprof.srcport_dict[key] = counter_values[value_index]
-                    value_index += 1
-                client.p4_counter_clear(counter_id)
-
-                counter_id = COUNTER_NAME_TO_ID['dst_port_counter_' + str(USED_COUNTER_TBL_INDEX)]
-                couter_values = client.p4_counter_retrieve(counter_id)
-                if counter_values.count != -1:
-                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
-                else:
-                    raise RTEError, "Failed to get counter.\n"
-                value_index = 0
-                for key in self.curr_meaprof.dstport_dict:
-                    self.curr_meaprof.dstport_dict[key] = counter_values[value_index]
-                    value_index += 1
-                client.p4_counter_clear(counter_id)
-
-                counter_id = COUNTER_NAME_TO_ID['W_G_B_counter']
-                client.p4_counter_clear(counter_id)
-
-                counter_id = COUNTER_NAME_TO_ID['n_flow_counter']
-                counter_values = client.p4_counter_retrieve(counter_id)
-                if counter_values.count != -1:
-                    counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
-                else:
-                    raise RTEError, "Failed to get counter.\n"
-                self.curr_meaprof.n_flows = counter_values[0]
-                client.p4_counter_clear(counter_id)
+                self.AssignMeaDictsByCounters('src_ip_counter_' + str(USED_COUNTER_TBL_INDEX), self.curr_meaprof.srcnet_dict)
+                self.AssignMeaDictsByCounters('dst_ip_counter_' + str(USED_COUNTER_TBL_INDEX), self.curr_meaprof.dstnet_dict)
+                self.AssignMeaDictsByCounters('src_port_counter_' + str(USED_COUNTER_TBL_INDEX), self.curr_meaprof.srcport_dict)
+                self.AssignMeaDictsByCounters('dst_port_counter_' + str(USED_COUNTER_TBL_INDEX), self.curr_meaprof.dstport_dict)
+                self.AssignMeaDictsByCounters('proto_counter_' + str(USED_COUNTER_TBL_INDEX), self.curr_meaprof.prot_dict)
                 
             self.curr_meaprof.PostProc()
             self.last_meaprof = self.curr_meaprof
@@ -518,6 +533,11 @@ class AMU:
         self.curr_scoreboard = ScoreBoard()
         self.curr_scoreboard.SetProfiles(self.last_meaprof)
 
+        global LAST_SCORE_TBL_INDEX
+        global USED_SCORE_TBL_INDEX
+        first_circle = False
+        if LAST_SCORE_TBL_INDEX == None:
+            first_circle = True
         LAST_SCORE_TBL_INDEX = USED_SCORE_TBL_INDEX
         USED_SCORE_TBL_INDEX = (USED_SCORE_TBL_INDEX + 1) % SCORE_TBL_SETS
 
@@ -525,82 +545,23 @@ class AMU:
         if use_threadpool:
             pass
         else:
-            rule_index = 0
-            tbl_id = TABLE_NAME_TO_ID['src_ip_score_' + str(USED_SCORE_TBL_INDEX)]
-            for key in self.curr_nomprof.srcnet_dict:
-                tbl_entry = TableEntry()
-                tbl_entry.rule_name = 'rule%d' % rule_index
-                rule_index += 1
-                tbl_entry.default_rule = False
-                tbl_entry.match = '{ "ipv4.srcAddr" : { "value" : "%s"}}' % key
-                tbl_entry.actions = '{ "type" : "add_score", "data" : { "score_value" : "%d" } }' % self.curr_scoreboard.srcnet_scores[key]
-                ret = client.table_entry_add(tblid, tbl_entry)
-                if ret.value != RteReturnValue.SUCCESS:
-                    raise RTEError, "Failed to add rule to table %s" % 'src_ip_score_' + str(USED_SCORE_TBL_INDEX)
-
-            rule_index = 0
-            tbl_id = TABLE_NAME_TO_ID['dst_ip_score_' + str(USED_SCORE_TBL_INDEX)]
-            for key in self.curr_nomprof.dstnet_dict:
-                tbl_entry = TableEntry()
-                tbl_entry.rule_name = 'rule%d' % rule_index
-                rule_index += 1
-                tbl_entry.default_rule = False
-                tbl_entry.match = '{ "ipv4.dstAddr" : { "value" : "%s"}}' % key
-                tbl_entry.actions = '{ "type" : "add_score", "data" : { "score_value" : "%d" } }' % self.curr_scoreboard.dstnet_scores[key]
-                ret = client.table_entry_add(tblid, tbl_entry)
-                if ret.value != RteReturnValue.SUCCESS:
-                    raise RTEError, "Failed to add rule to table %s" % 'dst_ip_score_' + str(USED_SCORE_TBL_INDEX)
-
-            rule_index = 0
-            tbl_id = TABLE_NAME_TO_ID['src_port_score_' + str(USED_SCORE_TBL_INDEX)]
-            for key in self.curr_nomprof.srcport_dict:
-                tbl_entry = TableEntry()
-                tbl_entry.rule_name = 'rule%d' % rule_index
-                rule_index += 1
-                tbl_entry.default_rule = False
-                tbl_entry.match = '{ "ipv4.srcPort" : { "value" : "%s"}}' % key
-                tbl_entry.actions = '{ "type" : "add_score", "data" : { "score_value" : "%d" } }' % self.curr_scoreboard.srcport_scores[key]
-                ret = client.table_entry_add(tblid, tbl_entry)
-                if ret.value != RteReturnValue.SUCCESS:
-                    raise RTEError, "Failed to add rule to table %s" % 'src_port_score_' + str(USED_SCORE_TBL_INDEX)
-
-            rule_index = 0
-            tbl_id = TABLE_NAME_TO_ID['dst_port_score_' + str(USED_SCORE_TBL_INDEX)]
-            for key in self.curr_nomprof.dstport_dict:
-                tbl_entry = TableEntry()
-                tbl_entry.rule_name = 'rule%d' % rule_index
-                rule_index += 1
-                tbl_entry.default_rule = False
-                tbl_entry.match = '{ "ipv4.dstPort" : { "value" : "%s"}}' % key
-                tbl_entry.actions = '{ "type" : "add_score", "data" : { "score_value" : "%d" } }' % self.curr_scoreboard.dstport_scores[key]
-                ret = client.table_entry_add(tblid, tbl_entry)
-                if ret.value != RteReturnValue.SUCCESS:
-                    raise RTEError, "Failed to add rule to table %s" % 'dst_port_score_' + str(USED_SCORE_TBL_INDEX)
-
-            rule_index = 0
-            tbl_id = TABLE_NAME_TO_ID['proto_score_' + str(USED_SCORE_TBL_INDEX)]
-            for key in self.curr_nomprof.prot_dict:
-                tbl_entry = TableEntry()
-                tbl_entry.rule_name = 'rule%d' % rule_index
-                rule_index += 1
-                tbl_entry.default_rule = False
-                tbl_entry.match = '{ "ipv4.protocol" : { "value" : "%s"}}' % key
-                tbl_entry.actions = '{ "type" : "add_score", "data" : { "score_value" : "%d" } }' % self.curr_scoreboard.prot_scores[key]
-                ret = client.table_entry_add(tblid, tbl_entry)
-                if ret.value != RteReturnValue.SUCCESS:
-                    raise RTEError, "Failed to add rule to table %s" % 'proto_score_' + str(USED_SCORE_TBL_INDEX)
-
+            self.AddRulesToScoreTables('src_ip_score_' + str(USED_SCORE_TBL_INDEX), self.curr_scoreboard.srcnet_scores)
+            self.AddRulesToScoreTables('dst_ip_score_' + str(USED_SCORE_TBL_INDEX), self.curr_scoreboard.dstnet_scores)
+            self.AddRulesToScoreTables('src_port_score_' + str(USED_SCORE_TBL_INDEX), self.curr_scoreboard.srcport_scores)
+            self.AddRulesToScoreTables('dst_port_score_' + str(USED_SCORE_TBL_INDEX), self.curr_scoreboard.dstport_scores)
+            self.AddRulesToScoreTables('proto_score_' + str(USED_SCORE_TBL_INDEX), self.curr_scoreboard.prot_scores)
+            
         ### Then switch to new updated score tables
         tbl_entry = TableEntry()
         tbl_entry.rule_name = 'only_one'
-        tbl_entry.default_rule = False
-        tbl_entry.match = '{ }'
-        tbl_entry.actions = '{ }'
-        if client.table_entry_delete(TABLE_NAME_TO_ID['switch_score_flag'], tbl_entry).value != RteReturnValue.SUCCESS:
-            raise RTEError, "Failed to delete rule from table switch_score_flag.\n"
+        tbl_entry.default_rule = True
         tbl_entry.actions = '{ "type" : "set_score_flag", "data" : { "flag" : { "value" : "%d"}}}' % USED_SCORE_TBL_INDEX
-        if client.table_entry_add(TABLE_NAME_TO_ID['switch_score_flag'], tbl_entry).value != RteReturnValue.SUCCESS:
-            raise RTEError, "Failed to add rule to table switch_score_flag.\n"
+        if first_circle == True:
+            ret = client.table_entry_add(TABLE_NAME_TO_ID['switch_score_flag'], tbl_entry).value
+        else:
+            ret = client.table_entry_edit(TABLE_NAME_TO_ID['switch_score_flag'], tbl_entry).value
+        if ret != RteReturnValue.SUCCESS:
+            raise RTEError, "Failed to edit rule of table switch_score_flag.\n"
 
 
         # Delete Old Table Rules
@@ -648,10 +609,10 @@ class AMU:
             if counter_values.count != -1:
                     counter_values = struct.unpack('%sQ'%(counter_values.count/8), counter_values.data)
             else:
-                raise RTEError, "Failed to get counter.\n"
-            self.flows_in_white = counter_values[0]
-            self.flows_in_grey = counter_values[1]
-            self.flows_in_black = counter_values[2]
+                raise RTEError, "Failed to get counter W_G_B_counter.\n"
+            self.flows_in_white = counter_values[1]
+            self.flows_in_grey = counter_values[2]
+            self.flows_in_black = counter_values[3]
             client.p4_counter_clear(counter_id)
 
             cycle_fps = self.flows_in_cycle / THRESH_PERIOD
@@ -689,30 +650,23 @@ class AMU:
                    Reset counters if necessary
                 """
                 tbl_id = TABLE_NAME_TO_ID['classify']
-                table_entries = client.table_retrieve(tbl_id)
-                for table_entry in table_entries:
-                    client.table_entry_delete(tbl_id, table_entry)
                 tbl_entry = TableEntry()
                 tbl_entry.rule_name = 'white'
                 tbl_entry.default_rule = False
                 tbl_entry.match = '{ "score_metadata.score" : { "value" : "%f->10000.0"}}' % thresh_white
                 tbl_entry.actions = ' {"type":"send_out", "data" : {"out_port" : {"value": "v0.1"}}}'
-                if client.table_entry_add(tblid, tbl_entry).value != RteReturnValue.SUCCESS:
-                    raise RTEError, "Failed to add rule to table classify.\n"
-                tbl_entry = TableEntry()
+                if client.table_entry_edit(tblid, tbl_entry).value != RteReturnValue.SUCCESS:
+                    raise RTEError, "Failed to edit rule of table classify.\n"
                 tbl_entry.rule_name = 'grey'
-                tbl_entry.default_rule = False
                 tbl_entry.match = '{ "score_metadata.score" : { "value" : "%f->%f"}}' % thresh_gray,thresh_white
                 tbl_entry.actions = ' {"type":"send_out", "data" : {"out_port" : {"value": "v0.2"}}}'
-                if client.table_entry_add(tblid, tbl_entry).value != RteReturnValue.SUCCESS:
-                    raise RTEError, "Failed to add rule to table classify.\n"
-                tbl_entry = TableEntry()
+                if client.table_entry_edit(tblid, tbl_entry).value != RteReturnValue.SUCCESS:
+                    raise RTEError, "Failed to edit rule of table classify.\n"
                 tbl_entry.rule_name = 'black'
-                tbl_entry.default_rule = False
                 tbl_entry.match = '{ "score_metadata.score" : { "value" : "0->%f"}}' % thresh_grey
                 tbl_entry.actions = ' {"type":"_drop", "data" : { }}'
-                if client.table_entry_add(tblid, tbl_entry).value != RteReturnValue.SUCCESS:
-                    raise RTEError, "Failed to add rule to table classify.\n" 
+                if client.table_entry_edit(tblid, tbl_entry).value != RteReturnValue.SUCCESS:
+                    raise RTEError, "Failed to edit rule of table classify.\n" 
                 
 
             print ("%s: AMU - Update thresholds from %s to %s"
@@ -875,8 +829,8 @@ if __name__ == "__main__":
 
     # Initialization
     amu.Initialize()
-    legitFlowGen.Initialize()
-    attackFlowGen.Initialize()
+    #legitFlowGen.Initialize()
+    #attackFlowGen.Initialize()
 
 
 
