@@ -69,6 +69,7 @@ metadata l4_t l4;
 header_type score_metadata_t {
     fields {
         score: 16;
+	score_quantified: 16;
     }
 }
 
@@ -89,3 +90,20 @@ header_type score_flag_t {
 }
 
 metadata score_flag_t score_flag;
+
+header_type factor_t {
+    fields {
+        x: 16;
+    }
+}
+
+metadata factor_t factor;
+
+header_type threshold_t {
+    fields {
+        T_high:32;
+        T_low:32;
+    }   
+}   
+
+metadata threshold_t threshold;

@@ -12,15 +12,44 @@ action add_score(score_value) {
 	add_to_field(score_metadata.score, score_value);
 }
 
-action send_out(out_port) {
-	modify_field(standard_metadata.egress_spec, out_port);
+action set_x(score_value,x) {
+	add_to_field(score_metadata.score, score_value);
+	modify_field(factor.x, x);
 }
 
-primitive_action add_to_array();
 
-action add_array() {
-	add_to_array();
+action set_threshold(high,low) {
+	modify_field(threshold.T_high, high);
+	modify_field(threshold.T_low, low);
 }
+
+primitive_action set_x_factor();
+
+action x_factor() {
+	set_x_factor();
+}
+
+
+action do_pdf() {
+	count(pdf_counter,score_metadata.score);        
+}
+
+field_list copy_to_cpu_fields {
+	score_metadata;
+	factor;
+	threshold;
+	tcp;
+}
+
+action send_digest() {
+	generate_digest(0,copy_to_cpu_fields);
+}
+
+action send_out() {
+    split();
+}
+
+primitive_action split();
 
 action _drop() {
 	drop();

@@ -1,816 +1,866 @@
 {
-  "tables" : {
-    "l4_ports" : {
-      "rules" : [
-        {
-          "name" : "l4_ports_1",
-          "match" : {
-            "ipv4.protocol" : {
-              "value" : "6"
-            }
-          },
-          "action" : {
-            "type" : "set_tcp_ports",
-            "data" : {}
-          }
-        },
-        {
-          "name" : "l4_ports_2",
-          "match" : {
-            "ipv4.protocol" : {
-              "value" : "17"
-            }
-          },
-          "action" : {
-            "type" : "set_udp_ports",
-            "data" : {}
-          }
-        }
-      ]
-    },
-    "switch_score_flag" : {
-      "default_rule" :
-      {
-        "name" : "switch_score_flag_default",
-        "action" : {
-          "type" : "set_score_flag",
-          "data" : {
-            "flag" : {
-              "value" : "0"
-            }
-          }
-        }
-      }
-    },
-    "switch_counting_flag" : {
-      "default_rule" :
-      {
-        "name" : "switch_counting_flag_default",
-        "action" : {
-          "type" : "set_counting_flag",
-          "data" : {
-            "flag" : {
-              "value" : "0"
-            }
-          }
-        }
-      }
-    },
-
-    "src_ip_1" : {
-      "rules" : [
-        {
-          "name" : "src_ip_1_1",
-          "match" : {
-            "ipv4.srcAddr" : {
-              "value" : "192.168.1.0/24"
-            }
-          },
-          "action" : {
-            "type" : "__src_ip_1___nop",
-            "data" : { }
-          }
-        }
-      ]
-
-      
-    },
-    "src_ip_2" : {
-      "default_rule" :
-      {
-        "name" : "src_ip_2_default",
-        "action" : {
-          "type" : "__src_ip_2___nop",
-          "data" : { }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "src_ip_2_1",
-          "match" : {
-            "ipv4.srcAddr" : {
-              "value" : "192.168.2.0/24"
-            }
-          },
-          "action" : {
-            "type" : "__src_ip_2___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "dst_ip_1" : {
-       "default_rule" :
-      {
-        "name" : "dst_ip_1_default",
-        "action" : {
-          "type" : "__dst_ip_1___nop",
-          "data" : { }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "dst_ip_1_1",
-          "match" : {
-            "ipv4.dstAddr" : {
-              "value" : "10.0.0.0/24"
-            }
-          },
-          "action" : {
-            "type" : "__dst_ip_1___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "dst_ip_2" : {
-       "default_rule" :
-      {
-        "name" : "dst_ip_2_default",
-        "action" : {
-          "type" : "__dst_ip_2___nop",
-          "data" : { }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "dst_ip_2_1",
-          "match" : {
-            "ipv4.dstAddr" : {
-              "value" : "10.0.1.0/24"
-            }
-          },
-          "action" : {
-            "type" : "__dst_ip_2___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "src_port_1" : {
-      "rules" : [
-        {
-          "name" : "src_port_1_1",
-          "match" : {
-            "l4.sport" : {
-              "value" : "14->14"
-            }
-          },
-          "action" : {
-            "type" : "__src_port_1___nop",
-            "data" : { }
-          }
-        },
-        {
-          "name" : "src_port_1_2",
-          "match" : {
-            "l4.sport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "__src_port_1___nop",
-            "data" : { }
-          }
-        },
-        {
-          "name" : "src_port_1_3",
-          "match" : {
-            "l4.sport" : {
-              "value" : "1025->65535"
-            }
-          },
-          "action" : {
-            "type" : "__src_port_1___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "src_port_2" : {
-      "rules" : [
-        {
-          "name" : "src_port_2_1",
-          "match" : {
-            "l4.sport" : {
-              "value" : "14->14"
-            }
-          },
-          "action" : {
-            "type" : "__src_port_2___nop",
-            "data" : { }
-          }
-        },
-        {
-          "name" : "src_port_2_2",
-          "match" : {
-            "l4.sport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "__src_port_2___nop",
-            "data" : { }
-          }
-        },
-        {
-          "name" : "src_port_2_3",
-          "match" : {
-            "l4.sport" : {
-              "value" : "1025->65535"
-            }
-          },
-          "action" : {
-            "type" : "__src_port_2___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "dst_port_1" : {
-      "rules" : [
-        {
-          "name" : "dst_port_1_1",
-          "match" : {
-            "l4.dport" : {
-              "value" : "50->50"
-            }
-          },
-          "action" : {
-            "type" : "__dst_port_1___nop",
-            "data" : { }
-          }
-        },
-        {
-          "name" : "dst_port_1_2",
-          "match" : {
-            "l4.dport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "__dst_port_1___nop",
-            "data" : { }
-          }
-        },
-        {
-          "name" : "dst_port_1_3",
-          "match" : {
-            "l4.dport" : {
-              "value" : "1025->65535"
-            }
-          },
-          "action" : {
-            "type" : "__dst_port_1___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "dst_port_2" : {
-      "rules" : [
-        {
-          "name" : "dst_port_2_1",
-          "match" : {
-            "l4.dport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "__dst_port_2___nop",
-            "data" : { }
-          }
-        },
-        {
-          "name" : "dst_port_2_2",
-          "match" : {
-            "l4.dport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "__dst_port_2___nop",
-            "data" : { }
-          }
-        },
-        {
-          "name" : "dst_port_2_3",
-          "match" : {
-            "l4.dport" : {
-              "value" : "1025->65535"
-            }
-          },
-          "action" : {
-            "type" : "__dst_port_2___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "proto_1" : {
-       "default_rule" :
-      {
-        "name" : "proto_1_default",
-        "action" : {
-          "type" : "__proto_1___nop",
-          "data" : { }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "proto_1_1",
-          "match" : {
-            "ipv4.protocol" : {
-              "value" : "6"
-            }
-          },
-          "action" : {
-            "type" : "__proto_1___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "proto_2" : {
-      "default_rule" :
-      {
-        "name" : "proto_2_default",
-        "action" : {
-          "type" : "__proto_2___nop",
-          "data" : { }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "proto_2_1",
-          "match" : {
-            "ipv4.protocol" : {
-              "value" : "6"
-            }
-          },
-          "action" : {
-            "type" : "__proto_2___nop",
-            "data" : { }
-          }
-        }
-      ]
-    },
-    "src_ip_score_1" : {
-      "default_rule" :{
-        "name" : "src_ip_score_1_default",
-        "action" : {
-          "type" : "add_score",
-          "data" : {
-            "score_value" : {
-              "value" : "0"
-            }
-          }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "src_ip_score_1_1",
-          "match" : {
-            "ipv4.srcAddr" : {
-              "value" : "192.168.1.0/24"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "5"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "src_ip_score_2" : {
-      "default_rule" :{
-        "name" : "src_ip_score_2_default",
-        "action" : {
-          "type" : "add_score",
-          "data" : {
-            "score_value" : {
-              "value" : "0"
-            }
-          }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "src_ip_score_2_1",
-          "match" : {
-            "ipv4.srcAddr" : {
-              "value" : "192.168.2.0/24"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "4"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "dst_ip_score_1" : {
-      "default_rule" : {
-        "name" : "dst_ip_score_1_default",
-        "action" : {
-          "type" : "add_score",
-          "data" : {
-            "score_value" : {
-              "value" : "0"
-            }
-          }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "dst_ip_score_1_1",
-          "match" : {
-            "ipv4.dstAddr" : {
-              "value" : "10.0.0.0/24"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "5"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "dst_ip_score_2" : {
-      "default_rule" : {
-        "name" : "dst_ip_score_2_default",
-        "action" : {
-          "type" : "add_score",
-          "data" : {
-            "score_value" : {
-              "value" : "0"
-            }
-          }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "dst_ip_score_2_1",
-          "match" : {
-            "ipv4.dstAddr" : {
-              "value" : "10.0.1.0/24"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "4"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "proto_score_1" : {
-      "default_rule" : {
-        "name" : "proto_score_1_default",
-        "action" : {
-          "type" : "add_score",
-          "data" : {
-            "score_value" : {
-              "value" : "0"
-            }
-          }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "proto_score_1_1",
-          "match" : {
-            "ipv4.protocol" : {
-              "value" : "6"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "6"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "proto_score_2" : {
-      "default_rule" : {
-        "name" : "proto_score_2_default",
-        "action" : {
-          "type" : "add_score",
-          "data" : {
-            "score_value" : {
-              "value" : "0"
-            }
-          }
-        }
-      },
-      "rules" : [
-        {
-          "name" : "proto_score_2_1",
-          "match" : {
-            "ipv4.protocol" : {
-              "value" : "6"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "6"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "src_port_score_1" : {
-      "rules" : [
-        {
-          "name" : "src_port_score_1_1",
-          "match" : {
-            "l4.sport" : {
-              "value" : "14->14"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "14"
-              }
-            }
-          }
-        },
-        {
-          "name" : "src_port_score_1_2",
-          "match" : {
-            "l4.sport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "0"
-              }
-            }
-          }
-        },
-        {
-          "name" : "src_port_score_1_1",
-          "match" : {
-            "l4.sport" : {
-              "value" : "1025->65535"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "0"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "src_port_score_2" : {
-      "rules" : [
-        {
-          "name" : "src_port_score_2_1",
-          "match" : {
-            "l4.sport" : {
-              "value" : "14->14"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "14"
-              }
-            }
-          }
-        },
-        {
-          "name" : "src_port_score_2_2",
-          "match" : {
-            "l4.sport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "0"
-              }
-            }
-          }
-        },
-        {
-          "name" : "src_port_score_2_1",
-          "match" : {
-            "l4.sport" : {
-              "value" : "1025->65535"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "0"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "dst_port_score_1" : {
-      "rules" : [
-        {
-          "name" : "dst_port_score_1_1",
-          "match" : {
-            "l4.dport" : {
-              "value" : "50->50"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "50"
-              }
-            }
-          }
-        },
-        {
-          "name" : "dst_port_score_1_2",
-          "match" : {
-            "l4.dport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "0"
-              }
-            }
-          }
-        },
-        {
-          "name" : "dst_port_score_1_1",
-          "match" : {
-            "l4.dport" : {
-              "value" : "1025->65535"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "0"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "dst_port_score_2" : {
-      "rules" : [
-        {
-          "name" : "dst_port_score_2_1",
-          "match" : {
-            "l4.dport" : {
-              "value" : "50->50"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "50"
-              }
-            }
-          }
-        },
-        {
-          "name" : "dst_port_score_2_2",
-          "match" : {
-            "l4.dport" : {
-              "value" : "0->1024"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "0"
-              }
-            }
-          }
-        },
-        {
-          "name" : "dst_port_score_2_1",
-          "match" : {
-            "l4.dport" : {
-              "value" : "1025->65535"
-            }
-          },
-          "action" : {
-            "type" : "add_score",
-            "data" : {
-              "score_value" : {
-                "value" : "0"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "sum_up" : {
-      "default_rule" :
-      {
-        "name" : "sum_up_default",
-        "action" : {
-          "type" : "__sum_up__add_score",
-          "data" : {
-            "score_value" : {
-              "value" : "100"
-            }
-          }
-        }
-      }
-    },
-    "classify" : {
-      "rules" : [
-        {
-          "name" : "classify_1",
-          "match" : {
-            "score_metadata.score" : {
-              "value" : "0->150"
-            }
-          },
-         "action" : {
-            "type" : "_drop",
-            "data" : {}
-          }
-        },
-        {
-          "name" : "classify_2",
-          "match" : {
-            "score_metadata.score" : {
-              "value" : "150->179"
-            }
-          },
-          "action" : {
-            "type" : "send_out",
-            "data" : {
-              "out_port" : {
-                "value" : "v0.1"
-              }
-            }
-          }
-        },
-        {
-          "name" : "classify_3",
-          "match" : {
-            "score_metadata.score" : {
-              "value" : "180->300"
-            }
-          },
-           "action" : {
-            "type" : "send_out",
-            "data" : {
-              "out_port" : {
-                "value" : "v0.2"
-              }
-            }
-          }
-
-        }
-      ]
-    }
-  }
+	"tables" : {
+		"l4_ports" : {
+                        "rules" : [
+                                {
+                                        "name" : "l4_ports_1",
+                                        "match" : {
+                                                "ipv4.protocol" : {
+                                                        "value" : "6"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "set_tcp_ports",
+                                                "data" : {}
+                                        }
+                                },
+				{
+                                        "name" : "l4_ports_2",
+                                        "match" : {
+                                                "ipv4.protocol" : {
+                                                        "value" : "17"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "set_udp_ports",
+                                                "data" : {}
+                                        }
+                                }
+			]
+		},
+		"switch_counting_flag" : {
+                        "default_rule" : {
+                                "name" : "switch_counting_flag_default",
+                                "action" : {
+                                        "type" : "set_counting_flag",
+                                        "data" : {
+                                                "flag" : {
+                                                        "value" : "0"
+                                                }
+                                        }
+                                }
+                        }
+                },
+		"switch_score_flag" : {
+                        "default_rule" : {
+                        	"name" : "switch_score_flag_default",        
+                                "action" : {
+                                	"type" : "set_score_flag",
+                                        "data" : {
+                                        	"flag" : {
+                                                	"value" : "0"
+                                                }
+                                        }
+                                }
+                        }
+                },
+		"src_ip_0" : {
+                        "default_rule" : {
+                                "name" : "src_ip_0_default",
+                                "action" : {
+                                        "type" : "__src_ip_0___nop",
+                                        "data" : {
+                                        }
+                                }
+                        },
+			"rules" : [
+                                {
+                                        "name" : "src_ip_0_1",
+                                        "match" : {
+                                                "ipv4.srcAddr" : {
+                                                        "value" : "192.168.1.125/24"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__src_ip_0___nop",
+                                                "data" : {
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"dst_ip_0" : {
+                        "default_rule" : {
+                                "name" : "dst_ip_0_default",
+                                "action" : {
+                                        "type" : "__dst_ip_0___nop",
+                                        "data" : {
+                                                
+                                        }
+                                }
+                        },
+                        "rules" : [
+                                {
+                                        "name" : "dst_ip_0_1",
+                                        "match" : {
+                                                "ipv4.dstAddr" : {
+                                                        "value" : "10.0.0.70/24"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__dst_ip_0___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"proto_0" : {
+                        "default_rule" : {
+                                "name" : "proto_0_default",
+                                "action" : {
+                                        "type" : "__proto_0___nop",
+                                        "data" : {
+                                                
+                                        }
+                                }
+                        },
+                        "rules" : [
+                                {
+                                        "name" : "proto_0_1",
+                                        "match" : {
+                                                "ipv4.protocol" : {
+                                                        "value" : "6"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__proto_0___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"src_port_0" : {
+                        "rules" : [
+                                {
+                                        "name" : "src_port_0_1",
+                                        "match" : {
+                                                "tcp.srcPort" : {
+                                                        "value" : "14->14"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__src_port_0___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                },
+                                {
+                                        "name" : "src_port_0_2",
+                                        "match" : {
+                                                "tcp.srcPort" : {
+                                                        "value" : "0->1024"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__src_port_0___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                },
+				{
+                                        "name" : "src_port_0_3",
+                                        "match" : {
+                                                "tcp.srcPort" : {
+                                                        "value" : "1025->65535"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__src_port_0___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"dst_port_0" : {
+                        "rules" : [
+                                {
+                                        "name" : "dst_port_0_1",
+                                        "match" : {
+                                                "tcp.dstPort" : {
+                                                        "value" : "50->50"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__dst_port_0___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                },
+                                {
+                                        "name" : "dst_port_0_2",
+                                        "match" : {
+                                                "tcp.dstPort" : {
+                                                        "value" : "0->1024"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__dst_port_0___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                },
+				{
+                                        "name" : "dst_port_0_3",
+                                        "match" : {
+                                                "tcp.dstPort" : {
+                                                        "value" : "1025->65535"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__dst_port_0___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"src_ip_1" : {
+                        "default_rule" : {
+                                "name" : "src_ip_1_default",
+                                "action" : {
+                                        "type" : "__src_ip_1___nop",
+                                        "data" : {
+                                        }
+                                }
+                        },
+			"rules" : [
+                                {
+                                        "name" : "src_ip_1_1",
+                                        "match" : {
+                                                "ipv4.srcAddr" : {
+                                                        "value" : "192.168.1.125/24"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__src_ip_1___nop",
+                                                "data" : {
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"dst_ip_1" : {
+                        "default_rule" : {
+                                "name" : "dst_ip_1_default",
+                                "action" : {
+                                        "type" : "__dst_ip_1___nop",
+                                        "data" : {
+                                                
+                                        }
+                                }
+                        },
+                        "rules" : [
+                                {
+                                        "name" : "dst_ip_1_1",
+                                        "match" : {
+                                                "ipv4.dstAddr" : {
+                                                        "value" : "10.0.0.70/24"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__dst_ip_1___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"proto_1" : {
+                        "default_rule" : {
+                                "name" : "proto_1_default",
+                                "action" : {
+                                        "type" : "__proto_1___nop",
+                                        "data" : {
+                                                
+                                        }
+                                }
+                        },
+                        "rules" : [
+                                {
+                                        "name" : "proto_1_1",
+                                        "match" : {
+                                                "ipv4.protocol" : {
+                                                        "value" : "6"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__proto_1___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"src_port_1" : {
+                        "rules" : [
+                                {
+                                        "name" : "src_port_1_1",
+                                        "match" : {
+                                                "l4.sport" : {
+                                                        "value" : "14->14"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__src_port_1___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                },
+                                {
+                                        "name" : "src_port_1_2",
+                                        "match" : {
+                                                "l4.sport" : {
+                                                        "value" : "0->1024"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__src_port_1___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                },
+				{
+                                        "name" : "src_port_1_3",
+                                        "match" : {
+                                                "l4.sport" : {
+                                                        "value" : "1025->65535"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__src_port_1___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"dst_port_1" : {
+                        "rules" : [
+                                {
+                                        "name" : "dst_port_1_1",
+                                        "match" : {
+                                                "l4.dport" : {
+                                                        "value" : "50->50"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__dst_port_1___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                },
+                                {
+                                        "name" : "dst_port_1_2",
+                                        "match" : {
+                                                "l4.dport" : {
+                                                        "value" : "0->1024"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__dst_port_1___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                },
+				{
+                                        "name" : "dst_port_1_3",
+                                        "match" : {
+                                                "l4.dport" : {
+                                                        "value" : "1025->65535"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "__dst_port_1___nop",
+                                                "data" : {
+                                                        
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"src_ip_score_0" : {
+			"default_rule" : {
+				"name" : "src_ip_score_0_default",
+				"action" : {
+					"type" : "add_score",
+					"data" : {
+						"score_value" : {
+							"value" : "0"
+						}
+					}
+				}
+			},
+			"rules" : [
+				{
+					"name" : "src_ip_score_0_1",
+					"match" : {
+						"ipv4.srcAddr" : {
+							"value" : "192.168.1.125/24"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "5"
+							}
+						}
+					}
+				}
+			]
+		},
+		"dst_ip_score_0" : {
+                        "default_rule" : {
+                                "name" : "dst_ip_score_0_default",
+                                "action" : {
+                                        "type" : "add_score",
+                                        "data" : {
+                                                "score_value" : {
+                                                        "value" : "0"
+                                                }
+                                        }
+                                }
+                        },
+                        "rules" : [
+                                {
+                                        "name" : "dst_ip_score_0_1",
+                                        "match" : {
+                                                "ipv4.dstAddr" : {
+                                                        "value" : "10.0.0.70/24"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "add_score",
+                                                "data" : {
+                                                        "score_value" : {
+                                                                "value" : "5"
+                                                        }
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"proto_score_0" : {
+                        "default_rule" : {
+                                "name" : "proto_score_0_default",
+                                "action" : {
+                                        "type" : "add_score",
+                                        "data" : {
+                                                "score_value" : {
+                                                        "value" : "0"
+                                                }
+                                        }
+                                }
+                        },
+                        "rules" : [
+                                {
+                                        "name" : "proto_score_0_1",
+                                        "match" : {
+                                                "ipv4.protocol" : {
+                                                        "value" : "6"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "add_score",
+                                                "data" : {
+                                                        "score_value" : {
+                                                                "value" : "6"
+                                                        }
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"src_port_score_0" : {
+			"rules" : [
+				{
+					"name" : "src_port_score_0_1",
+					"match" : {
+						"tcp.srcPort" : {
+							"value" : "14->14"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "14"
+							}
+						}
+					}
+				},
+				{
+					"name" : "src_port_score_0_2",
+					"match" : {
+						"tcp.srcPort" : {
+							"value" : "0->1024"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "0"
+							}
+						}
+					}
+				},
+				{
+					"name" : "src_port_score_0_1",
+					"match" : {
+						"tcp.srcPort" : {
+							"value" : "1025->65535"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "0"
+							}
+						}
+					}
+				}
+			]
+		},
+		"dst_port_score_0" : {
+			"rules" : [
+				{
+					"name" : "dst_port_score_0_1",
+					"match" : {
+						"tcp.dstPort" : {
+							"value" : "50->50"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "50"
+							}
+						}
+					}
+				},
+				{
+					"name" : "dst_port_score_0_2",
+					"match" : {
+						"tcp.dstPort" : {
+							"value" : "0->1024"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "0"
+							}
+						}
+					}
+				},
+				{
+					"name" : "dst_port_score_0_1",
+					"match" : {
+						"tcp.dstPort" : {
+							"value" : "1025->65535"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "0"
+							}
+						}
+					}
+				}
+			]
+		},
+		"src_ip_score_1" : {
+			"default_rule" : {
+				"name" : "src_ip_score_1_default",
+				"action" : {
+					"type" : "add_score",
+					"data" : {
+						"score_value" : {
+							"value" : "0"
+						}
+					}
+				}
+			},
+			"rules" : [
+				{
+					"name" : "src_ip_score_1_1",
+					"match" : {
+						"ipv4.srcAddr" : {
+							"value" : "192.168.1.125/24"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "5"
+							}
+						}
+					}
+				}
+			]
+		},
+		"dst_ip_score_1" : {
+                        "default_rule" : {
+                                "name" : "dst_ip_score_1_default",
+                                "action" : {
+                                        "type" : "add_score",
+                                        "data" : {
+                                                "score_value" : {
+                                                        "value" : "0"
+                                                }
+                                        }
+                                }
+                        },
+                        "rules" : [
+                                {
+                                        "name" : "dst_ip_score_1_1",
+                                        "match" : {
+                                                "ipv4.dstAddr" : {
+                                                        "value" : "10.0.0.70/24"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "add_score",
+                                                "data" : {
+                                                        "score_value" : {
+                                                                "value" : "5"
+                                                        }
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"proto_score_1" : {
+                        "default_rule" : {
+                                "name" : "proto_score_1_default",
+                                "action" : {
+                                        "type" : "add_score",
+                                        "data" : {
+                                                "score_value" : {
+                                                        "value" : "0"
+                                                }
+                                        }
+                                }
+                        },
+                        "rules" : [
+                                {
+                                        "name" : "proto_score_1_1",
+                                        "match" : {
+                                                "ipv4.protocol" : {
+                                                        "value" : "6"
+                                                }
+                                        },
+                                        "action" : {
+                                                "type" : "add_score",
+                                                "data" : {
+                                                        "score_value" : {
+                                                                "value" : "6"
+                                                        }
+                                                }
+                                        }
+                                }
+                        ]
+                },
+		"src_port_score_1" : {
+			"rules" : [
+				{
+					"name" : "src_port_score_1_1",
+					"match" : {
+						"l4.sport" : {
+							"value" : "14->14"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "14"
+							}
+						}
+					}
+				},
+				{
+					"name" : "src_port_score_1_2",
+					"match" : {
+						"l4.sport" : {
+							"value" : "0->1024"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "0"
+							}
+						}
+					}
+				},
+				{
+					"name" : "src_port_score_1_1",
+					"match" : {
+						"l4.sport" : {
+							"value" : "1025->65535"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "0"
+							}
+						}
+					}
+				}
+			]
+		},
+		"dst_port_score_1" : {
+			"rules" : [
+				{
+					"name" : "dst_port_score_1_1",
+					"match" : {
+						"l4.dport" : {
+							"value" : "50->50"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "50"
+							}
+						}
+					}
+				},
+				{
+					"name" : "dst_port_score_1_2",
+					"match" : {
+						"l4.dport" : {
+							"value" : "0->1024"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "0"
+							}
+						}
+					}
+				},
+				{
+					"name" : "dst_port_score_1_1",
+					"match" : {
+						"l4.dport" : {
+							"value" : "1025->65535"
+						}
+					},
+					"action" : {
+						"type" : "add_score",
+						"data" : {
+							"score_value" : {
+								"value" : "0"
+							}
+						}
+					}
+				}
+			]
+		},
+		"sum_up" : {
+                        "default_rule" : {
+                                "name" : "sum_up_default",
+                                "action" : {
+                                        "type" : "set_x",
+                                        "data" : {
+                                                "score_value" : {
+							"value" : "100"
+						},
+                                                "x" : {
+							"value" : "1"
+						}
+                                        }
+                                }
+                        }
+                },
+		"set_thresh" : {
+                        "default_rule" : {
+                                "name" : "set_thresh_default",
+                                "action" : {
+                                        "type" : "set_threshold",
+                                        "data" : {
+                                                "high" : {
+							"value": "180"
+						},
+                                                "low" : {
+							"value" : "150"
+						}
+                                        }
+                                }
+                        }
+                },
+		"discrete" : {
+                        "default_rule" : {
+                                "name" : "discrete_default",
+                                "action" : {
+                                        "type" : "x_factor",
+                                        "data" : {
+                                        }
+                                }
+                        }
+                },
+		"PDF" : {
+                        "default_rule" : {
+                                "name" : "PDF_default",
+                                "action" : {
+                                        "type" : "do_pdf",
+                                        "data" : {
+                                        }
+                                }
+                        }
+                },
+                "digest" : {
+                        "default_rule" : {
+                                "name" : "digest_default",
+                                "action" : {
+                                        "type" : "send_digest",
+                                        "data" : {
+                                        }
+                                }
+                        }
+                },
+		"classify" : {
+                        "default_rule" : {
+                                "name" : "classify_default",
+                                "action" : {
+                                        "type" : "send_out",
+                                        "data" : {
+                                        }
+                                }
+                        }
+                }
+	}
 }
